@@ -12,3 +12,4 @@ C:\Users\Clove\workspace\Projects\AdventOfCode\obj\Debug\net9.0\refint\AdventOfC
 C:\Users\Clove\workspace\Projects\AdventOfCode\obj\Debug\net9.0\AdventOfCode.pdb
 C:\Users\Clove\workspace\Projects\AdventOfCode\obj\Debug\net9.0\AdventOfCode.genruntimeconfig.cache
 C:\Users\Clove\workspace\Projects\AdventOfCode\obj\Debug\net9.0\ref\AdventOfCode.dll
+C:\Users\Clove\workspace\Projects\AdventOfCode\obj\Debug\net9.0\AdventOfCode.sourcelink.json

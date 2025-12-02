@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Numerics;
 
 class Program
 {
@@ -7,35 +8,61 @@ class Program
     {
         string[] lines = File.ReadAllLines("instructions.txt");
 
-        int dial = 50;
-        int zeroCount = 0;
+        BigInteger totalInvalid = 0;
+        int invalidCount = 0;
 
         foreach (string line in lines)
         {
-            char direction = line[0];
-            int move = int.Parse(line[1..]);
+            var ranges = line.Split(',');
 
-            if (direction == 'R')
+            foreach (string range in ranges)
             {
-                for (int i = 0; i < move; i++)
+                var parts = range.Split('-');
+                if (parts.Length != 2) continue;
+
+                long start = long.Parse(parts[0]);
+                long end = long.Parse(parts[1]);
+
+                for (long id = start; id <= end; id++)
                 {
-                    dial = (dial + 1) % 100;
-                    if (dial == 0)
-                        zeroCount++;
-                }
-            }
-            else if (direction == 'L')
-            {
-                for (int i = 0; i < move; i++)
-                {
-                    dial = (dial - 1 + 100) % 100;
-                    if (dial == 0)
-                        zeroCount++;
+                    if (IsRepeatedPattern(id.ToString()))
+                    {
+                        invalidCount++;
+                        totalInvalid += id;
+                    }
                 }
             }
         }
 
-        Console.WriteLine($"Final dial position: {dial}");
-        Console.WriteLine($"Password (times dial hit 0): {zeroCount}");
+        Console.WriteLine($"Number of invalid IDs: {invalidCount}");
+        Console.WriteLine($"Sum of invalid IDs: {totalInvalid}");
+    }
+
+    static bool IsRepeatedPattern(string s)
+    {
+        int len = s.Length;
+
+        // Try every possible block size that divides the length
+        for (int block = 1; block <= len / 2; block++)
+        {
+            if (len % block != 0) continue; // block size must divide length
+
+            string piece = s.Substring(0, block);
+            int repeats = len / block;
+
+            bool ok = true;
+            for (int i = 1; i < repeats; i++)
+            {
+                if (s.Substring(i * block, block) != piece)
+                {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok) return true; // pattern repeated at least twice
+        }
+
+        return false;
     }
 }

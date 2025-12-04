@@ -1,40 +1,69 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Numerics;
 
 class Program
 {
     static void Main()
     {
-        BigInteger totalJoltage = 0;
-        int b = 12; // 12 batteries
+        // Directions: 8 neighbors
+        int[] dr = { -1, -1, -1, 0, 0, 1, 1, 1 };
+        int[] dc = { -1,  0,  1,-1, 1,-1, 0, 1 };
 
-        foreach (var line in File.ReadLines("instructions.txt"))
+        // Load input into a mutable grid (char arrays!)
+        var lines = File.ReadAllLines("instructions.txt");
+        List<char[]> grid = new List<char[]>();
+
+        foreach (var line in lines)
+            grid.Add(line.ToCharArray());
+
+        int totalRemoved = 0;
+
+        while (true)
         {
-            string largest12 = MaxSubsequence(line, b);
-            BigInteger joltage = BigInteger.Parse(largest12);
-            totalJoltage += joltage;
-        }
+            List<(int r, int c)> toRemove = new();
 
-        Console.WriteLine($"Total output joltage: {totalJoltage}");
-    }
-
-    static string MaxSubsequence(string digits, int b)
-    {
-        var stack = new List<char>();
-        int n = digits.Length;
-
-        for (int i = 0; i < n; i++)
-        {
-            char c = digits[i];
-            while (stack.Count > 0 && stack[^1] < c && stack.Count - 1 + (n - i) >= b)
+            // Scan grid to find accessible rolls
+            for (int r = 0; r < grid.Count; r++)
             {
-                stack.RemoveAt(stack.Count - 1);
+                for (int c = 0; c < grid[r].Length; c++)
+                {
+                    if (grid[r][c] != '@')
+                        continue;
+
+                    int neigh = 0;
+
+                    // Count neighbors
+                    for (int k = 0; k < 8; k++)
+                    {
+                        int nr = r + dr[k];
+                        int nc = c + dc[k];
+
+                        if (nr >= 0 && nr < grid.Count &&
+                            nc >= 0 && nc < grid[nr].Length &&
+                            grid[nr][nc] == '@')
+                        {
+                            neigh++;
+                        }
+                    }
+
+                    // Fewer than 4 means accessible
+                    if (neigh < 4)
+                        toRemove.Add((r, c));
+                }
             }
-            stack.Add(c);
+
+            // Stop if nothing left to remove
+            if (toRemove.Count == 0)
+                break;
+
+            // Remove all found '@' this round
+            foreach (var (r, c) in toRemove)
+                grid[r][c] = '.';
+
+            totalRemoved += toRemove.Count;
         }
 
-        
-        return new string([.. stack.GetRange(0, b)]);
+        Console.WriteLine("Total removed: " + totalRemoved);
     }
 }

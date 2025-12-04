@@ -6,63 +6,35 @@ class Program
 {
     static void Main()
     {
-        string[] lines = File.ReadAllLines("instructions.txt");
+        BigInteger totalJoltage = 0;
+        int b = 12; // 12 batteries
 
-        BigInteger totalInvalid = 0;
-        int invalidCount = 0;
-
-        foreach (string line in lines)
+        foreach (var line in File.ReadLines("instructions.txt"))
         {
-            var ranges = line.Split(',');
-
-            foreach (string range in ranges)
-            {
-                var parts = range.Split('-');
-                if (parts.Length != 2) continue;
-
-                long start = long.Parse(parts[0]);
-                long end = long.Parse(parts[1]);
-
-                for (long id = start; id <= end; id++)
-                {
-                    if (IsRepeatedPattern(id.ToString()))
-                    {
-                        invalidCount++;
-                        totalInvalid += id;
-                    }
-                }
-            }
+            string largest12 = MaxSubsequence(line, b);
+            BigInteger joltage = BigInteger.Parse(largest12);
+            totalJoltage += joltage;
         }
 
-        Console.WriteLine($"Number of invalid IDs: {invalidCount}");
-        Console.WriteLine($"Sum of invalid IDs: {totalInvalid}");
+        Console.WriteLine($"Total output joltage: {totalJoltage}");
     }
 
-    static bool IsRepeatedPattern(string s)
+    static string MaxSubsequence(string digits, int b)
     {
-        int len = s.Length;
+        var stack = new List<char>();
+        int n = digits.Length;
 
-        // Try every possible block size that divides the length
-        for (int block = 1; block <= len / 2; block++)
+        for (int i = 0; i < n; i++)
         {
-            if (len % block != 0) continue; // block size must divide length
-
-            string piece = s.Substring(0, block);
-            int repeats = len / block;
-
-            bool ok = true;
-            for (int i = 1; i < repeats; i++)
+            char c = digits[i];
+            while (stack.Count > 0 && stack[^1] < c && stack.Count - 1 + (n - i) >= b)
             {
-                if (s.Substring(i * block, block) != piece)
-                {
-                    ok = false;
-                    break;
-                }
+                stack.RemoveAt(stack.Count - 1);
             }
-
-            if (ok) return true; // pattern repeated at least twice
+            stack.Add(c);
         }
 
-        return false;
+        
+        return new string([.. stack.GetRange(0, b)]);
     }
 }

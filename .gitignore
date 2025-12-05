@@ -1,0 +1,92 @@
+# --------------------------------------------------------------------------------------
+# GENERAL IGNORES (Operating Systems, IDEs)
+# --------------------------------------------------------------------------------------
+
+# Windows/File System files
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS files
+.DS_Store
+
+# --------------------------------------------------------------------------------------
+# VISUAL STUDIO / .NET BUILD ARTIFACTS
+# --------------------------------------------------------------------------------------
+
+## BUILD OUTPUT
+# Ignore all built-in outputs folders
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+# Ignore packages directory for older project types
+packages/
+
+# Rider/Resharper/VS-Code
+.idea/
+.vs/
+.vscode/
+
+## MISCELLANEOUS
+# User-specific project settings
+*.user
+*.user.*
+*.User
+# Backup files
+*.bak
+# Source control files (if not using Git)
+*.scc
+*._scc
+
+# --------------------------------------------------------------------------------------
+# DEPENDENCIES AND PACKAGES
+# --------------------------------------------------------------------------------------
+
+# NuGet Packages directory (if placed in solution root)
+[Pp]ackages/
+# Ignore the hidden .nuget folder which can contain local package cache
+.nuget/
+# NuGet/dotnet tool restore cache
+*.nuget.cache
+# Generated lock files
+project.assets.json
+# NuGet generated project files
+*.g.cs
+*.g.i.cs
+*.g.resources.cs
+
+# --------------------------------------------------------------------------------------
+# TEMP / LOGS / TESTING
+# --------------------------------------------------------------------------------------
+
+# Log files
+*.log
+
+# Test results
+TestResults/
+.TestStore/
+*.trx
+*.vsix
+# Code coverage results
+*.coverage
+*.coverprofile
+*.pbit
+
+# --------------------------------------------------------------------------------------
+# CONFIGURATION & SECRETS (IMPORTANT)
+# --------------------------------------------------------------------------------------
+
+# Configuration transformation files that might contain secrets/connection strings
+*.pubxml
+*.override.json
+
+# Local settings and user secrets
+appsettings.Development.json
+appsettings.Staging.json
+appsettings.Local.json
+*.localsettings
+UserSecretsId
+
+# Web deployment/publish profiles (can contain sensitive paths or credentials)
+Properties/PublishProfiles/

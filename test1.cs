@@ -1,62 +1,97 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Numerics;
 
-class Program
+class RangeMerger
 {
-    static void Main()
+    public static void Main()
     {
-        int[] dr = [-1, -1, -1, 0, 0, 1, 1, 1];
-        int[] dc = [-1,  0,  1,-1, 1,-1, 0, 1];
+        string filePath = "instructions.txt";
+        
+        List<(long Min, long Max)> freshRanges = new List<(long Min, long Max)>(); 
 
-        var lines = File.ReadAllLines("instructions.txt");
-        List<char[]> grid = [];
-
-        foreach (var line in lines)
-            grid.Add(line.ToCharArray());
-
-        int totalRemoved = 0;
-
-        while (true)
+        try
         {
-            List<(int r, int c)> toRemove = [];
-
-            for (int r = 0; r < grid.Count; r++)
+            string[] lines = File.ReadAllLines(filePath);
+            
+            foreach (string line in lines)
             {
-                for (int c = 0; c < grid[r].Length; c++)
+                string trimmedLine = line.Trim();
+
+                if (string.IsNullOrWhiteSpace(trimmedLine))
                 {
-                    if (grid[r][c] != '@')
-                        continue;
+                    break;
+                }
 
-                    int neigh = 0;
-
-                    for (int k = 0; k < 8; k++)
+                try
+                {
+                    string[] parts = trimmedLine.Split('-');
+                    if (parts.Length == 2)
                     {
-                        int nr = r + dr[k];
-                        int nc = c + dc[k];
-
-                        if (nr >= 0 && nr < grid.Count &&
-                            nc >= 0 && nc < grid[nr].Length &&
-                            grid[nr][nc] == '@')
-                        {
-                            neigh++;
-                        }
+                        long min = long.Parse(parts[0].Trim());
+                        long max = long.Parse(parts[1].Trim());
+                        freshRanges.Add((min, max));
                     }
-
-                    if (neigh < 4)
-                        toRemove.Add((r, c));
+                }
+                catch (FormatException ex)
+                {
+                    Console.WriteLine($"Error: Skipping invalid range line '{trimmedLine}'. Details: {ex.Message}");
                 }
             }
-
-            if (toRemove.Count == 0)
-                break;
-
-            foreach (var (r, c) in toRemove)
-                grid[r][c] = '.';
-
-            totalRemoved += toRemove.Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while reading the file: {ex.Message}");
+            return;
         }
 
-        Console.WriteLine("Total removed: " + totalRemoved);
+        if (freshRanges.Count == 0)
+        {
+            Console.WriteLine("No fresh ranges found in the file.");
+            return;
+        }
+
+
+        freshRanges.Sort((a, b) => a.Min.CompareTo(b.Min));
+
+        List<(long Min, long Max)> daIDs = new List<(long Min, long Max)>();
+
+        long currentMin = freshRanges[0].Min;
+        long currentMax = freshRanges[0].Max;
+
+        for (int i = 1; i < freshRanges.Count; i++)
+        {
+            long nextMin = freshRanges[i].Min;
+            long nextMax = freshRanges[i].Max;
+
+            if (nextMin <= currentMax + 1)
+            {
+                currentMax = Math.Max(currentMax, nextMax);
+            }
+            else
+            {
+                daIDs.Add((currentMin, currentMax));
+
+                currentMin = nextMin;
+                currentMax = nextMax;
+            }
+        }
+
+        daIDs.Add((currentMin, currentMax));
+
+        BigInteger totalFreshCount = BigInteger.Zero;
+        
+        foreach (var range in daIDs)
+        {
+
+            BigInteger length = new BigInteger(range.Max - range.Min + 1);
+            totalFreshCount += length;
+        }
+
+        Console.WriteLine($"Total Initial Ranges: {freshRanges.Count}");
+        Console.WriteLine($"Total Merged Ranges: {daIDs.Count}");
+        Console.WriteLine($"Total **Fresh** Ingredient IDs found (covered length): {totalFreshCount}");
     }
 }

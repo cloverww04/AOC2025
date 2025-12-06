@@ -2,96 +2,75 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 
-class RangeMerger
+class Program
 {
-    public static void Main()
+    static void Main()
     {
-        string filePath = "instructions.txt";
-        
-        List<(long Min, long Max)> freshRanges = new List<(long Min, long Max)>(); 
+        var lines = File.ReadAllLines("instructions.txt")
+                        .Where(l => !string.IsNullOrWhiteSpace(l))
+                        .ToArray();
 
-        try
+        int numRows = lines.Length;
+        int numCols = lines.Max(l => l.Length);
+
+        for (int r = 0; r < numRows; r++)
+            if (lines[r].Length < numCols)
+                lines[r] = lines[r].PadRight(numCols, ' ');
+
+        List<long> results = new List<long>();
+        int col = numCols - 1;
+
+        while (col >= 0)
         {
-            string[] lines = File.ReadAllLines(filePath);
-            
-            foreach (string line in lines)
+            if (lines.All(row => row[col] == ' '))
             {
-                string trimmedLine = line.Trim();
+                col--;
+                continue;
+            }
 
-                if (string.IsNullOrWhiteSpace(trimmedLine))
+            int startCol = col;
+            while (startCol > 0 && !lines.All(row => row[startCol - 1] == ' '))
+                startCol--;
+
+            List<long> numbers = new List<long>();
+            for (int c = startCol; c <= col; c++)
+            {
+                string numStr = "";
+                for (int r = 0; r < numRows - 1; r++)
                 {
+                    if (lines[r][c] != ' ')
+                        numStr += lines[r][c];
+                }
+
+                if (!string.IsNullOrWhiteSpace(numStr))
+                    numbers.Add(long.Parse(numStr));
+            }
+
+            char op = ' ';
+            for (int c = startCol; c <= col; c++)
+            {
+                if (lines[numRows - 1][c] != ' ')
+                {
+                    op = lines[numRows - 1][c];
                     break;
                 }
-
-                try
-                {
-                    string[] parts = trimmedLine.Split('-');
-                    if (parts.Length == 2)
-                    {
-                        long min = long.Parse(parts[0].Trim());
-                        long max = long.Parse(parts[1].Trim());
-                        freshRanges.Add((min, max));
-                    }
-                }
-                catch (FormatException ex)
-                {
-                    Console.WriteLine($"Error: Skipping invalid range line '{trimmedLine}'. Details: {ex.Message}");
-                }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred while reading the file: {ex.Message}");
-            return;
-        }
-
-        if (freshRanges.Count == 0)
-        {
-            Console.WriteLine("No fresh ranges found in the file.");
-            return;
-        }
 
 
-        freshRanges.Sort((a, b) => a.Min.CompareTo(b.Min));
-
-        List<(long Min, long Max)> daIDs = new List<(long Min, long Max)>();
-
-        long currentMin = freshRanges[0].Min;
-        long currentMax = freshRanges[0].Max;
-
-        for (int i = 1; i < freshRanges.Count; i++)
-        {
-            long nextMin = freshRanges[i].Min;
-            long nextMax = freshRanges[i].Max;
-
-            if (nextMin <= currentMax + 1)
+            long result = numbers[0];
+            for (int i = 1; i < numbers.Count; i++)
             {
-                currentMax = Math.Max(currentMax, nextMax);
+                if (op == '+') result += numbers[i];
+                else if (op == '*') result *= numbers[i];
             }
-            else
-            {
-                daIDs.Add((currentMin, currentMax));
 
-                currentMin = nextMin;
-                currentMax = nextMax;
-            }
+            results.Add(result);
+
+            col = startCol - 2;
         }
 
-        daIDs.Add((currentMin, currentMax));
-
-        BigInteger totalFreshCount = BigInteger.Zero;
-        
-        foreach (var range in daIDs)
-        {
-
-            BigInteger length = new BigInteger(range.Max - range.Min + 1);
-            totalFreshCount += length;
-        }
-
-        Console.WriteLine($"Total Initial Ranges: {freshRanges.Count}");
-        Console.WriteLine($"Total Merged Ranges: {daIDs.Count}");
-        Console.WriteLine($"Total **Fresh** Ingredient IDs found (covered length): {totalFreshCount}");
+        long grandTotal = results.Sum();
+        Console.WriteLine("Grand Total = " + grandTotal);
     }
 }

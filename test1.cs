@@ -2,75 +2,64 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 
-class Program
+class QuantumTachyon
 {
     static void Main()
     {
-        var lines = File.ReadAllLines("instructions.txt")
-                        .Where(l => !string.IsNullOrWhiteSpace(l))
-                        .ToArray();
+        
+        string[] lines = File.ReadAllLines("instructions.txt");
 
-        int numRows = lines.Length;
-        int numCols = lines.Max(l => l.Length);
+        // create a 2D grid of chars
+        char[][] grid = lines.Select(l => l.ToCharArray()).ToArray();
+        int rows = grid.Length;
+        int cols = grid[0].Length;
 
-        for (int r = 0; r < numRows; r++)
-            if (lines[r].Length < numCols)
-                lines[r] = lines[r].PadRight(numCols, ' ');
-
-        List<long> results = new List<long>();
-        int col = numCols - 1;
-
-        while (col >= 0)
-        {
-            if (lines.All(row => row[col] == ' '))
-            {
-                col--;
-                continue;
-            }
-
-            int startCol = col;
-            while (startCol > 0 && !lines.All(row => row[startCol - 1] == ' '))
-                startCol--;
-
-            List<long> numbers = new List<long>();
-            for (int c = startCol; c <= col; c++)
-            {
-                string numStr = "";
-                for (int r = 0; r < numRows - 1; r++)
+        // find the S starting position
+        int startR = -1, startC = -1;
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+                if (grid[r][c] == 'S')
                 {
-                    if (lines[r][c] != ' ')
-                        numStr += lines[r][c];
-                }
-
-                if (!string.IsNullOrWhiteSpace(numStr))
-                    numbers.Add(long.Parse(numStr));
-            }
-
-            char op = ' ';
-            for (int c = startCol; c <= col; c++)
-            {
-                if (lines[numRows - 1][c] != ' ')
-                {
-                    op = lines[numRows - 1][c];
+                    startR = r;
+                    startC = c;
                     break;
                 }
-            }
 
+        //  timeline count
+        var memo = new Dictionary<(int r, int c), BigInteger>();
 
-            long result = numbers[0];
-            for (int i = 1; i < numbers.Count; i++)
+        BigInteger CountTimelines(int r, int c)
+        {
+            // if off grid exit and count as one completed timeline
+            if (r < 0 || r >= rows || c < 0 || c >= cols)
+                return BigInteger.One;
+
+            var key = (r, c);
+            if (memo.TryGetValue(key, out BigInteger cached))
+                return cached;
+
+            char cell = grid[r][c];
+
+            BigInteger result;
+            if (cell == '^')
             {
-                if (op == '+') result += numbers[i];
-                else if (op == '*') result *= numbers[i];
+                // spawn left and right from same row
+                result = CountTimelines(r, c - 1) + CountTimelines(r, c + 1);
+            }
+            else
+            {
+                // go down one row
+                result = CountTimelines(r + 1, c);
             }
 
-            results.Add(result);
-
-            col = startCol - 2;
+            memo[key] = result;
+            return result;
         }
 
-        long grandTotal = results.Sum();
-        Console.WriteLine("Grand Total = " + grandTotal);
+        BigInteger totalTimelines = CountTimelines(startR + 1, startC);
+
+        Console.WriteLine(totalTimelines.ToString());
     }
 }

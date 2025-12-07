@@ -90,3 +90,5 @@ UserSecretsId
 
 # Web deployment/publish profiles (can contain sensitive paths or credentials)
 Properties/PublishProfiles/
+
+/foam

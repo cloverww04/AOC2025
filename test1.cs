@@ -1,65 +1,196 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Numerics;
 
-class QuantumTachyon
+
+public struct Point3D
 {
-    static void Main()
+    public double X { get; }
+    public double Y { get; }
+    public double Z { get; }
+
+    public Point3D(double x, double y, double z)
     {
-        
-        string[] lines = File.ReadAllLines("instructions.txt");
+        X = x;
+        Y = y;
+        Z = z;
+    }
+}
 
-        // create a 2D grid of chars
-        char[][] grid = lines.Select(l => l.ToCharArray()).ToArray();
-        int rows = grid.Length;
-        int cols = grid[0].Length;
+// Represents a potential connection between two junction boxes
+public class Edge
+{
+    public int U { get; } // Index of the first point
+    public int V { get; } // Index of the second point
+    public long SquaredDistance { get; } 
 
-        // find the S starting position
-        int startR = -1, startC = -1;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
-                if (grid[r][c] == 'S')
-                {
-                    startR = r;
-                    startC = c;
-                    break;
-                }
+    public Edge(int u, int v, long distance)
+    {
+        U = u;
+        V = v;
+        SquaredDistance = distance;
+    }
+}
 
-        //  timeline count
-        var memo = new Dictionary<(int r, int c), BigInteger>();
+// Disjoint Set Union (DSU) or Union-Find structure
+public class DSU
+{
+    private int[] Parent; 
+    private int[] Size;   
 
-        BigInteger CountTimelines(int r, int c)
+    public DSU(int n)
+    {
+        Parent = new int[n];
+        Size = new int[n];
+        for (int i = 0; i < n; i++)
         {
-            // if off grid exit and count as one completed timeline
-            if (r < 0 || r >= rows || c < 0 || c >= cols)
-                return BigInteger.One;
+            Parent[i] = i; 
+            Size[i] = 1;   
+        }
+    }
 
-            var key = (r, c);
-            if (memo.TryGetValue(key, out BigInteger cached))
-                return cached;
+    public int Find(int i)
+    {
+        if (Parent[i] == i)
+            return i;
+        return Parent[i] = Find(Parent[i]);
+    }
 
-            char cell = grid[r][c];
+    // Merges the sets containing i and j (returns true if a merge occurred)
+    public bool Union(int i, int j)
+    {
+        int rootI = Find(i);
+        int rootJ = Find(j);
 
-            BigInteger result;
-            if (cell == '^')
+        if (rootI != rootJ)
+        {
+            if (Size[rootI] < Size[rootJ])
             {
-                // spawn left and right from same row
-                result = CountTimelines(r, c - 1) + CountTimelines(r, c + 1);
+                Parent[rootI] = rootJ;
+                Size[rootJ] += Size[rootI];
             }
             else
             {
-                // go down one row
-                result = CountTimelines(r + 1, c);
+                Parent[rootJ] = rootI;
+                Size[rootI] += Size[rootJ];
             }
+            return true;
+        }
+        return false; // Already in the same circuit
+    }
 
-            memo[key] = result;
-            return result;
+    public List<int> GetCircuitSizes()
+    {
+        List<int> sizes = new List<int>();
+        for (int i = 0; i < Parent.Length; i++)
+        {
+            if (Parent[i] == i)
+            {
+                sizes.Add(Size[i]);
+            }
+        }
+        return sizes;
+    }
+}
+
+class Program
+{
+    private static long CalculateSquaredDistance(Point3D p1, Point3D p2)
+    {
+        //  d(p,q)={\sqrt {(p_{1}-q_{1})^{2}+(p_{2}-q_{2})^{2}+(p_{3}-q_{3})^{2}}}.}
+        long dx = (long)p1.X - (long)p2.X;
+        long dy = (long)p1.Y - (long)p2.Y;
+        long dz = (long)p1.Z - (long)p2.Z;
+
+        return (dx * dx) + (dy * dy) + (dz * dz);
+    }
+
+    static void Main(string[] args)
+    {
+        const string filePath = "instructions.txt";
+        List<Point3D> dataPoints = new List<Point3D>();
+
+        try
+        {         
+            string[] lines = File.ReadAllLines(filePath);
+
+            foreach (string line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                string[] parts = line.Trim().Split(',');
+
+                if (parts.Length == 3)
+                {
+                    if (int.TryParse(parts[0], out int x) &&
+                        int.TryParse(parts[1], out int y) &&
+                        int.TryParse(parts[2], out int z))
+                    {
+                        dataPoints.Add(new Point3D(x, y, z));
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Warning: Skipping unparseable line: {line}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred during file processing: {ex.Message}");
+            return;
         }
 
-        BigInteger totalTimelines = CountTimelines(startR + 1, startC);
+        int N = dataPoints.Count;
+        Console.WriteLine($"Successfully parsed {N} junction boxes.");
+        
+        // Generate and sort all connections
+        Console.WriteLine($"\nGenerating all {N * (N - 1) / 2} possible connections...");
+        List<Edge> allEdges = new List<Edge>();
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = i + 1; j < N; j++)
+            {
+                long distance = CalculateSquaredDistance(dataPoints[i], dataPoints[j]);
+                allEdges.Add(new Edge(i, j, distance));
+            }
+        }
+        
+        // Sort by the squared distance
+        List<Edge> sortedEdges = allEdges
+        .OrderBy(e => e.SquaredDistance)
+        .ThenBy(e => e.U)
+        .ThenBy(e => e.V)
+        .ToList();
+        
 
-        Console.WriteLine(totalTimelines.ToString());
+        DSU dsu = new DSU(N);
+
+        int circuitsRemaining = N;
+        Edge? lastConnectingEdge = null;
+
+        foreach (Edge edge in sortedEdges)
+        {
+            if (circuitsRemaining == 1)
+                break;
+
+            if (dsu.Union(edge.U, edge.V))
+            {
+                circuitsRemaining--;
+                lastConnectingEdge = edge;
+            }
+        }
+
+        int uIndex = lastConnectingEdge.U;
+        int vIndex = lastConnectingEdge.V;
+
+        double x1 = dataPoints[uIndex].X;
+        double x2 = dataPoints[vIndex].X;
+
+        long finalProduct = (long)x1 * (long)x2;
+
+        Console.WriteLine($"Product of the X coordinates of the last two connected boxes: {finalProduct}");
     }
 }

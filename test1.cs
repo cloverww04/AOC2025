@@ -35,38 +35,61 @@ partial class Program
             }
         }
 
-        int result = CountPaths(graph, "you", "out", new HashSet<string>());
-        Console.WriteLine($"Number of distinct paths from 'you' to 'out': {result}");
+        long result = CountPaths(graph, "svr", "out", new HashSet<string>(), false, false);
+        Console.WriteLine($"Number of distinct paths from 'svr' to 'out': {result}");
 
     }
 
-    static int CountPaths(
+    // sticky note: memoization to avoid recomputing paths
+    static Dictionary<(string, bool, bool), long> memo = new();
+
+    static long CountPaths(
         Dictionary<string, List<string>> graph,
         string current,
         string target,
-        HashSet<string> visited)
+        HashSet<string> visited,
+        bool seenDac,
+        bool seenFft)
     {
+        if (current == "dac") seenDac = true;
+        if (current == "fft") seenFft = true;
+
+        // look at the sticky note to avoid counting from scratch every time
+        var key = (current, seenDac, seenFft);
+        if (memo.TryGetValue(key, out long cached))
+            return cached;
 
         if (current == target)
         {
-            return 1;
+            long result = (seenDac && seenFft) ? 1 : 0;
+            memo[key] = result;
+            return result;
         }
 
+        if (visited.Contains(current))
+            return 0;
+
         visited.Add(current);
-        int pathCount = 0;
+        long total = 0;
 
         if (graph.ContainsKey(current))
         {
             foreach (var next in graph[current])
             {
-                if (!visited.Contains(next))
-                {
-                    pathCount += CountPaths(graph, next, target, [.. visited]);
-                }
+                total += CountPaths(
+                    graph,
+                    next,
+                    target,
+                    visited,
+                    seenDac,
+                    seenFft
+                );
             }
         }
 
-        return pathCount;
+        visited.Remove(current);
+        memo[key] = total;
+        return total;
     }
 
 }

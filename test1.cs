@@ -5,103 +5,68 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Google.OrTools.LinearSolver;
 
-public class Manual
-{
-    public List<List<int>> Buttons { get; set; } = [];
-    public List<int> Joltage { get; set; } = [];
-}
 
 partial class Program
 {
     static void Main()
     {
-        var manuals = ParseManuals("instructions.txt");
+       string inputFile = "instructions.txt";
 
-        long total = 0;
-        foreach (var manual in manuals)
+       string[] lines = File.ReadAllLines(inputFile);
+
+       Dictionary<string, List<string>> graph = [];
+
+       foreach (var line in lines)
         {
-            int presses = SolveMachineJoltage_ILP(manual);
-            total += presses;
-        }
+            if(string.IsNullOrWhiteSpace(line)) continue;
 
-        Console.WriteLine($"\nTotal presses required = {total}");
-    }
+            var parts = line.Split(":");
+            var node = parts[0].Trim();
+            var targets = parts[1].Split(" ", StringSplitOptions.RemoveEmptyEntries);
 
-    static List<Manual> ParseManuals(string path)
-    {
-        var lines = File.ReadAllLines(path);
-        var manuals = new List<Manual>();
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
-                continue;
-
-            var buttonMatches = MyRegex().Matches(trimmed);
-            var buttons = new List<List<int>>();
-            foreach (Match m in buttonMatches)
+            if(!graph.ContainsKey(node))
             {
-                var nums = m.Groups[1].Value
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(int.Parse)
-                            .ToList();
-                buttons.Add(nums);
+                graph[node] = [];
             }
 
-            var jMatch = MyRegex1().Match(trimmed);
-
-            var joltage = jMatch.Groups[1].Value
-                           .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                           .Select(int.Parse)
-                           .ToList();
-
-            manuals.Add(new Manual
+            foreach(var target in targets)
             {
-                Buttons = buttons,
-                Joltage = joltage
-            });
-        }
-
-        return manuals;
-    }
-
-    static int SolveMachineJoltage_ILP(Manual manual)
-    {
-        int numButtons = manual.Buttons.Count;
-        int numCounters = manual.Joltage.Count;
-
-        Solver solver = Solver.CreateSolver("SCIP") ?? throw new Exception("Could not create solver.");
-        Variable[] x = new Variable[numButtons];
-        for (int i = 0; i < numButtons; i++)
-            x[i] = solver.MakeIntVar(0.0, double.PositiveInfinity, $"x{i}");
-
-        for (int j = 0; j < numCounters; j++)
-        {
-            LinearExpr? sum = x.Length > 0 ? x[0] * 0 : null;
-            for (int i = 0; i < numButtons; i++)
-            {
-                if (manual.Buttons[i].Contains(j))
-                    sum += x[i];
+                graph[node].Add(target.Trim());
             }
-            solver.Add(sum == manual.Joltage[j]);
         }
 
-        LinearExpr? objective = x.Length > 0 ? x[0] * 0 : null;
-        foreach (var xi in x)
-            objective += xi;
+        int result = CountPaths(graph, "you", "out", new HashSet<string>());
+        Console.WriteLine($"Number of distinct paths from 'you' to 'out': {result}");
 
-        solver.Minimize(objective);
-
-        var resultStatus = solver.Solve();
-        if (resultStatus != Solver.ResultStatus.OPTIMAL)
-            throw new Exception("No optimal solution found for a machine.");
-
-        return (int)solver.Objective().Value();
     }
 
-    [GeneratedRegex(@"\((.*?)\)")]
-    private static partial Regex MyRegex();
-    [GeneratedRegex(@"\{(.*?)\}")]
-    private static partial Regex MyRegex1();
+    static int CountPaths(
+        Dictionary<string, List<string>> graph,
+        string current,
+        string target,
+        HashSet<string> visited)
+    {
+
+        if (current == target)
+        {
+            return 1;
+        }
+
+        visited.Add(current);
+        int pathCount = 0;
+
+        if (graph.ContainsKey(current))
+        {
+            foreach (var next in graph[current])
+            {
+                if (!visited.Contains(next))
+                {
+                    pathCount += CountPaths(graph, next, target, [.. visited]);
+                }
+            }
+        }
+
+        return pathCount;
+    }
+
 }
